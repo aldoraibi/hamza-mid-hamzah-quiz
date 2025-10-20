@@ -1,258 +1,262 @@
-/* =========================
-   Hamza Quiz - Web (v2)
-   - accepts answers with/without diacritics
-   - 3 options, unique by normalized form
-   - 90s round
-   - auto-advance in 2s on correct with short reason
-========================= */
+/* Kanwa – Hamzah Quiz (90s, 3 choices, diacritics-insensitive, auto-next on correct) */
 
-/* -------- إعدادات عامة -------- */
-const ROUND_SECONDS = 90;       // مدة الجولة
-const AUTO_NEXT_MS  = 2000;     // زمن الرسالة عند الإجابة الصحيحة قبل الانتقال
-
-/* عناصر الواجهة */
+/* ===== Utilities ===== */
 const $ = (s) => document.querySelector(s);
-const titleEl     = $("#title");
-const promptEl    = $("#prompt");
-const optionsEl   = $("#options");
-const feedbackEl  = $("#feedback");
-const nextBtn     = $("#nextBtn");
-const timerEl     = $("#timer");
-const scoreEl     = $("#score");
-const startBtn    = $("#startBtn");
-const cardEl      = $("#card");
+const $$ = (s) => Array.from(document.querySelectorAll(s));
 
-/* بنك الأسئلة (يُحمَّل من bank-200.js) */
-if (!window.BANK || !Array.isArray(window.BANK) || window.BANK.length === 0) {
-  console.error("BANK is missing. Make sure bank-200.js is loaded before app.js");
+// إزالة الحركات من النص (تطابق دون/مع التشكيل)
+function stripDiacritics(str) {
+  if (!str) return "";
+  return str
+    .normalize("NFD")
+    .replace(/[\u064B-\u065F\u0670\u0610-\u061A\u06D6-\u06ED]/g, "")
+    .replace(/\u0640/g, "") // تطويل
+    .normalize("NFC");
 }
 
-/* -------- util: إزالة الحركات/التشكيل من العربية --------
-   يزيل التنوين، الفتحة، الضمة، الكسرة، السكون، الشدة … إلخ
------------------------------------------------------------ */
-function stripDiacritics(s) {
-  if (!s) return s;
-  // نُطبع إلى NFKD ثم نحذف المدود والعلامات المركبة
-  const withoutCombining = s.normalize("NFKD").replace(/\p{M}/gu, "");
-  // نحذف باقي حروف التشكيل العربية الشائعة إن وُجدت
-  return withoutCombining.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, "");
-}
-
-/* مقارنة بلا حركات */
-function equalNoHarakat(a, b) {
+// مقارنة نصين مع/بدون تشكيل
+function sameWord(a, b) {
   return stripDiacritics(a) === stripDiacritics(b);
 }
 
-/* اختيار عشوائي */
-function rand(n) { return Math.floor(Math.random() * n); }
+// إزالة التكرارات بين الخيارات بناءً على النص بعد إزالة الحركات
+function uniqueByNoTashkeel(arr) {
+  const seen = new Set();
+  const out = [];
+  for (const x of arr) {
+    const key = stripDiacritics(x);
+    if (!seen.has(key)) {
+      seen.add(key);
+      out.push(x);
+    }
+  }
+  return out;
+}
 
-/* خلط مصفوفة */
-function shuffle(arr) {
-  const a = arr.slice();
+// خلط مصفوفة
+function shuffle(a) {
   for (let i = a.length - 1; i > 0; i--) {
-    const j = rand(i + 1);
+    const j = Math.floor(Math.random() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
 }
 
-/* حالة اللعبة */
-let started      = false;
-let secondsLeft  = ROUND_SECONDS;
-let score        = 0;
-let order        = [];    // ترتيب الأسئلة
-let qIndex       = 0;
-let lockOptions  = false;
-let timerHandle  = null;
-let autoNextT    = null;
+/* ===== DOM refs (تأكد أن IDs موجودة في index.html) =====
+  #startBtn      زر ابدأ الجولة
+  #questionTxt   كلمة/جملة السؤال الكبيرة
+  #choices       حاوية الأزرار (3 خيارات)
+  #nextBtn       زر التالي
+  #feedback      صندوق التغذية الراجعة
+  #scoreLabel    عرض النقاط
+  #timerLabel    عرض الوقت
+*/
+const startBtn   = $("#startBtn");
+const qEl        = $("#questionTxt");
+const choicesBox = $("#choices");
+const nextBtn    = $("#nextBtn");
+const feedbackEl = $("#feedback");
+const scoreEl    = $("#scoreLabel");
+const timerEl    = $("#timerLabel");
 
-/* إنشاء 3 خيارات فريدة (بعد إزالة الحركات) */
-function makeThreeOptionsFor(item) {
-  // item = { prompt, correct, wrongs: [..], reason? }
-  const correct = item.correct;
-  const bag = new Map(); // key: normalized string => actual string
+/* ===== Game State ===== */
+const ROUND_SECONDS = 90;          // 1.5 دقيقة
+const AUTO_NEXT_DELAY_MS = 2000;   // ثانيتان بعد إجابة صحيحة
 
-  const pushIfNew = (opt) => {
-    const key = stripDiacritics(opt);
-    if (!bag.has(key)) bag.set(key, opt);
-  };
+let questions = [];      // مصفوفة بعد التحويل للبنية الموحدة
+let current = 0;         // مؤشر السؤال
+let score = 0;
+let started = false;
+let timerId = null;
+let remaining = ROUND_SECONDS;
+let locked = false;      // لمنع نقرات إضافية بعد اختيار
 
-  // أضف الصحيح
-  pushIfNew(correct);
+/* ===== Adapt incoming BANK into unified shape =====
+Unified shape:
+{ prompt: string, correct: string, distractors: string[], note?: string }
+Supports legacy:
+{ q, options[3], answer, note }
+*/
+function normalizeBank(BANK) {
+  const out = [];
+  for (const item of BANK) {
+    if (item && typeof item === "object") {
+      if (item.prompt && item.correct && Array.isArray(item.distractors)) {
+        out.push({
+          prompt: item.prompt,
+          correct: item.correct,
+          distractors: item.distractors.slice(0, 10),
+          note: item.note || ""
+        });
+      } else if (item.q && Array.isArray(item.options) && item.options.length >= 2) {
+        out.push({
+          prompt: item.q,
+          correct: item.answer,
+          distractors: item.options.filter(o => !sameWord(o, item.answer)),
+          note: item.note || ""
+        });
+      }
+    }
+  }
+  return out;
+}
 
-  // امزج الخاطئة وحاول نأخذ منها ما يكفي
-  const wrongsShuffled = shuffle(item.wrongs || []);
-  for (const w of wrongsShuffled) {
-    if (bag.size >= 3) break;
-    pushIfNew(w);
+/* ===== Build a 3-choice set with dedup by no-tashkeel ===== */
+function buildChoices(entry) {
+  // اختَر مشتتين مختلفين عن الصحيح (بعد إزالة الحركات)
+  const pool = entry.distractors.slice();
+  shuffle(pool);
+
+  // التقط حتى 5 بدائل ثم صفّها لإزالة المتشابه دون تشكيل
+  const candidates = uniqueByNoTashkeel([entry.correct, ...pool]).slice(0, 3);
+
+  // لو أقل من 3 (بسبب تطابق بدون تشكيل)، اكمل من بنك آخر:
+  if (candidates.length < 3) {
+    const others = shuffle(questions
+      .filter(q => !sameWord(q.correct, entry.correct))
+      .flatMap(q => q.distractors)
+    );
+    for (const w of others) {
+      candidates.push(w);
+      if (uniqueByNoTashkeel(candidates).length >= 3) break;
+    }
   }
 
-  // إذا ما كفّت الخاطئة (نادرًا)، نضيف متغيرات بدون حركات/بحركات لتعبئة
-  while (bag.size < 3) {
-    // نحاول توليد شكل مختلف قليلًا بإزالة الحركات أو إضافة حركة خفيفة لنفس الصحيح
-    const key = stripDiacritics(correct);
-    const variant = bag.has(key) ? correct.replace(/[\u064B-\u065F]/g, "") : correct;
-    pushIfNew(variant);
-    if (bag.size >= 3) break;
-    // كـ fallback: نضيف أي كلمة وهمية لنصل 3 (لن يصل غالبًا)
-    pushIfNew(correct + " ");
-  }
+  const final3 = uniqueByNoTashkeel(candidates).slice(0, 3);
+  // إن حصل نقص لأي سبب، ضاعِف الصحيح مع أشكال بحركة/بدونها (لضمان 3 أزرار)
+  while (final3.length < 3) final3.push(entry.correct);
 
-  // أعد كمصفوفة بعد خلط
-  return shuffle([...bag.values()]);
+  // ضع الصحيح في موقع عشوائي
+  shuffle(final3);
+  return final3;
 }
 
-/* تحميل واستعداد الجولة */
-function resetGame() {
-  started     = false;
-  secondsLeft = ROUND_SECONDS;
-  score       = 0;
-  qIndex      = 0;
-  lockOptions = false;
-  clearInterval(timerHandle);
-  clearTimeout(autoNextT);
-  order = shuffle([...Array(BANK.length).keys()]);
-  updateHeader();
-  renderWelcome();
+/* ===== Rendering ===== */
+function renderHUD() {
+  scoreEl && (scoreEl.textContent = String(score));
+  timerEl && (timerEl.textContent = `${remaining} ث`);
 }
 
-function startGame() {
-  started     = true;
-  secondsLeft = ROUND_SECONDS;
-  score       = 0;
-  qIndex      = 0;
-  lockOptions = false;
-  updateHeader();
-  renderQuestion();
-  timerHandle = setInterval(tick, 1000);
-}
-
-function tick() {
-  if (!started) return;
-  if (secondsLeft > 0) {
-    secondsLeft--;
-    updateHeader();
-  } else {
-    // انتهى الوقت
-    clearInterval(timerHandle);
-    renderResult();
-  }
-}
-
-function updateHeader() {
-  timerEl.textContent = `${secondsLeft} ث`;
-  scoreEl.textContent = `النقاط: ${score}`;
-}
-
-/* جلب السؤال الحالي */
-function currentItem() {
-  const idx = order[qIndex] ?? 0;
-  return BANK[idx];
-}
-
-/* الواجهة: شاشة البداية */
-function renderWelcome() {
-  titleEl.textContent = "مسابقة الهمزة المتوسطة والمتطرفة";
-  promptEl.innerHTML = `
-    <div class="lead">اضغط ابدأ لبدء جولة مدتها ${ROUND_SECONDS} ثانية. لكل سؤال ٣ خيارات.</div>
-  `;
-  optionsEl.innerHTML = "";
-  feedbackEl.className = "feedback hidden";
-  feedbackEl.textContent = "";
-  nextBtn.disabled = true;
-  startBtn.classList.remove("hidden");
-}
-
-/* الواجهة: سؤال */
 function renderQuestion() {
-  const item = currentItem();
-  titleEl.textContent = "مسابقة الهمزة المتوسطة والمتطرفة";
-  promptEl.innerHTML = `<div class="bigword">${item.prompt}</div>`;
+  const q = questions[current];
+  qEl.textContent = q.prompt;
 
-  const opts = makeThreeOptionsFor(item);
-  optionsEl.innerHTML = "";
+  // خيارات
+  const opts = buildChoices(q);
+  choicesBox.innerHTML = "";
+  opts.forEach((opt, idx) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "choice-btn"; // تأكد أن الـ CSS يكبر الخط
+    btn.textContent = opt;
+    btn.dataset.correct = sameWord(opt, q.correct) ? "1" : "0";
+    btn.onclick = () => onPick(btn);
+    choicesBox.appendChild(btn);
+  });
+
+  // تغذية راجعة/أزرار
   feedbackEl.className = "feedback hidden";
   feedbackEl.textContent = "";
   nextBtn.disabled = true;
-  startBtn.classList.add("hidden");
-  lockOptions = false;
-
-  opts.forEach((optText, i) => {
-    const btn = document.createElement("button");
-    btn.className = "option";
-    btn.innerHTML = `<span class="option-text">${optText}</span>`;
-    btn.onclick = () => handleAnswer(optText, item);
-    optionsEl.appendChild(btn);
-  });
+  locked = false;
 }
 
-/* التعامل مع النقر على خيار */
-function handleAnswer(chosenText, item) {
-  if (lockOptions) return;
-  lockOptions = true;
+function onPick(btn) {
+  if (locked) return;
+  locked = true;
 
-  const isCorrect = equalNoHarakat(chosenText, item.correct);
-  // لو عندك سبب في البنك (item.reason) نعرضه؛ وإلا سبب عام بسيط
-  const reason = item.reason || "تُكتب الهمزة حسب حركة الهمزة وما قبلها.";
+  const isCorrect = btn.dataset.correct === "1";
+  const q = questions[current];
 
   // تلوين الأزرار
-  [...optionsEl.querySelectorAll(".option")].forEach((btn) => {
-    const txt = btn.textContent.trim();
-    const ok  = equalNoHarakat(txt, item.correct);
-    btn.classList.add(ok ? "right" : "wrong");
-  });
+  $$(".choice-btn").forEach(b => b.disabled = true);
+  if (isCorrect) {
+    btn.classList.add("correct");
+  } else {
+    btn.classList.add("wrong");
+    // أظهر الصحيح
+    const ok = $$(".choice-btn").find(b => b.dataset.correct === "1");
+    ok && ok.classList.add("correct");
+  }
 
+  // التغذية الراجعة
   if (isCorrect) {
     score += 1;
-    updateHeader();
     feedbackEl.className = "feedback ok";
-    feedbackEl.textContent = `ممتاز ✅ — ${reason}`;
-    nextBtn.disabled = true;
-
+    feedbackEl.textContent = q.note ? `ممتاز! ✅ — ${q.note}` : "ممتاز! ✅";
+    renderHUD();
     // انتقال تلقائي بعد ثانيتين
-    clearTimeout(autoNextT);
-    autoNextT = setTimeout(() => {
-      gotoNext();
-    }, AUTO_NEXT_MS);
+    setTimeout(nextQuestion, AUTO_NEXT_DELAY_MS);
   } else {
     feedbackEl.className = "feedback bad";
-    feedbackEl.textContent = `إجابة غير صحيحة ❌ — الصحيح: «${item.correct}»`;
-    // لو خاطئة: الطالب يضغط "التالي"
-    nextBtn.disabled = false;
+    feedbackEl.textContent = q.note ? `إجابة غير صحيحة ❌ — الصحيح: «${q.correct}». ${q.note}` : `إجابة غير صحيحة ❌ — الصحيح: «${q.correct}».`;
+    nextBtn.disabled = false; // ينتظر “التالي”
   }
 }
 
-/* التالي */
-function gotoNext() {
-  if (qIndex < order.length - 1) {
-    qIndex += 1;
-    renderQuestion();
-  } else {
-    renderResult();
-  }
-}
-
-/* النتيجة */
-function renderResult() {
-  started = false;
-  clearInterval(timerHandle);
-  clearTimeout(autoNextT);
-  titleEl.textContent = "انتهت الجولة!";
-  promptEl.innerHTML = `<div class="lead">نتيجتك: ${score} من ${order.length}</div>`;
-  optionsEl.innerHTML = "";
-  nextBtn.disabled = true;
-  feedbackEl.className = "feedback hidden";
-  startBtn.classList.remove("hidden");
-}
-
-/* ربط الأزرار العامة */
-nextBtn.addEventListener("click", () => {
+function nextQuestion() {
   if (!started) return;
-  gotoNext();
-});
-startBtn.addEventListener("click", () => {
-  startGame();
+  current += 1;
+  if (current >= questions.length) {
+    // إعادة خلط وجولة جديدة
+    current = 0;
+    shuffle(questions);
+  }
+  renderQuestion();
+}
+
+function startRound() {
+  started = true;
+  score = 0;
+  current = 0;
+  remaining = ROUND_SECONDS;
+  renderHUD();
+  shuffle(questions);
+  renderQuestion();
+
+  if (timerId) clearInterval(timerId);
+  timerId = setInterval(() => {
+    if (!started) return;
+    remaining -= 1;
+    renderHUD();
+    if (remaining <= 0) {
+      clearInterval(timerId);
+      timerId = null;
+      endRound();
+    }
+  }, 1000);
+}
+
+function endRound() {
+  started = false;
+  // قفل الأزرار وعرض نتيجة بسيطة
+  $$(".choice-btn").forEach(b => b.disabled = true);
+  feedbackEl.className = "feedback info";
+  feedbackEl.textContent = `انتهى الوقت ⏱ — نتيجتك: ${score}`;
+  nextBtn.disabled = true;
+}
+
+/* ===== Wiring ===== */
+startBtn && (startBtn.onclick = () => {
+  startBtn.disabled = true;
+  startRound();
 });
 
-/* بداية */
-resetGame();
+nextBtn && (nextBtn.onclick = () => {
+  nextBtn.disabled = true;
+  nextQuestion();
+});
+
+/* ===== Boot ===== */
+(function boot() {
+  if (!window.BANK || !Array.isArray(window.BANK) || window.BANK.length === 0) {
+    console.error("BANK (bank-200.js) مفقود أو فارغ. تأكد أن bank-200.js مُضمّن قبل app.js");
+    return;
+  }
+  questions = normalizeBank(window.BANK);
+  if (questions.length < 3) {
+    console.warn("عدد الأسئلة قليل؛ أضف المزيد في bank-200.js");
+  }
+  renderHUD();
+  // واجهة البداية تبقى حتى يضغط “ابدأ الجولة”
+})();
