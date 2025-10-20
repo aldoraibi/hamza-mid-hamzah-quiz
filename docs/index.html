@@ -1,170 +1,173 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>مسابقة الهمزة المتوسطة والمتطرفة</title>
+
   <style>
-    :root {
-      --bg1: #f7f8fb;
-      --bg2: #eef1f5;
-      --ink: #111;
-      --muted: #6b7280;
-      --accent: #2563eb;
-      --ok: #1b7f2a;
-      --bad: #b25400;
-      --card: #ffffff;
-      --border: rgba(0,0,0,.12);
-    }
-    * { box-sizing: border-box; }
     body {
+      font-family: "Tahoma", "Amiri", sans-serif;
+      background-color: #f7f9fc;
+      color: #222;
+      text-align: center;
       margin: 0;
-      font-family: system-ui, -apple-system, "SF Pro", "Segoe UI", Roboto, "Noto Naskh Arabic", "Geeza Pro", "Almarai", Tahoma, Arial, sans-serif;
-      color: var(--ink);
-      background: linear-gradient(135deg, var(--bg1), var(--bg2));
-      min-height: 100vh;
-      display: flex;
-      align-items: stretch;
-      justify-content: center;
+      padding: 0;
+      direction: rtl;
     }
-    .wrap {
-      width: min(980px, 100%);
-      padding: 24px 16px 40px;
+
+    header {
+      background: #ffffff;
+      padding: 20px 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-size: clamp(26px, 3.8vw, 36px);
+      margin: 0;
+      color: #000;
+    }
+
+    h2 {
+      font-size: clamp(16px, 2vw, 20px);
+      color: #555;
+      margin: 6px 0 0 0;
+    }
+
+    .info-bar {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      font-size: 18px;
+      margin: 10px 0;
+    }
+
+    .card {
+      background: #fff;
+      margin: 0 auto;
+      max-width: 600px;
+      border-radius: 14px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 16px;
+    }
+
+    #prompt {
+      font-size: clamp(32px, 4vw, 44px);
+      font-weight: 800;
+      margin: 10px 0 20px;
+      color: #000;
+    }
+
+    #choices {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      align-items: stretch;
+      gap: 10px;
     }
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 18px;
-      box-shadow: 0 10px 24px rgba(0,0,0,.04);
-    }
-    h1 {
-      margin: 0;
-      font-size: clamp(24px, 4.8vw, 36px);
-      font-weight: 800;
-      text-align: center;
-    }
-    .muted { color: var(--muted); }
-    .row {
-      display: flex; align-items: center; gap: 12px;
-    }
-    .between { justify-content: space-between; }
-    .chip {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 8px 12px;
-      background: var(--bg2);
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      font-weight: 600;
-    }
+
     .btn {
-      display: inline-block;
-      border: 1px solid var(--border);
-      background: #e8eefc;
-      color: #0f1f52;
-      padding: 12px 16px;
+      cursor: pointer;
+      border: none;
+      padding: 16px;
+      font-size: clamp(20px, 3vw, 26px);
       border-radius: 12px;
-      font-size: clamp(16px, 2.8vw, 20px);
-      cursor: pointer;
-      text-align: center;
-      user-select: none;
-    }
-    .btn.primary {
-      background: #dbe8ff;
-      border-color: #c7dcff;
-    }
-    .btn:disabled { opacity: .6; cursor: not-allowed; }
-    .center { text-align: center; }
-
-    /* السؤال (النص الأعلى) — أكبر من قبل */
-    .prompt {
-      font-size: clamp(34px, 6.2vw, 48px);
-      line-height: 1.35;
-      font-weight: 800;
-      text-align: center;
-      padding: 10px 8px;
-      margin: 6px 0 10px;
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: 14px;
+      background: #e7ebf2;
+      transition: all 0.2s ease;
     }
 
-    /* الخيارات — أكبر من قبل */
-    .choice {
-      width: 100%;
-      text-align: start;
-      padding: 14px 16px;
-      margin: 8px 0;
-      font-size: clamp(22px, 2.8vw, 30px);
-      line-height: 1.35;
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      cursor: pointer;
+    .btn:hover:not(.disabled) {
+      background: #d8dfea;
     }
-    .choice:hover { filter: brightness(.98); }
+
+    .btn.disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .btn.choice.correct {
+      background: #c3f3c3;
+      border: 1px solid #58b458;
+    }
+
+    .btn.choice.wrong {
+      background: #f6c5c5;
+      border: 1px solid #d94a4a;
+    }
+
+    #feedback {
+      margin-top: 16px;
+      font-size: 20px;
+      padding: 10px;
+      border-radius: 8px;
+    }
+
     .ok {
-      color: var(--ok);
-      background: rgba(27,127,42,.10);
-      border-color: rgba(27,127,42,.25);
+      background: #e7fce7;
+      color: #046a04;
     }
+
     .bad {
-      color: var(--bad);
-      background: rgba(178,84,0,.10);
-      border-color: rgba(178,84,0,.25);
+      background: #fbeaea;
+      color: #a30000;
     }
-    .hidden { display: none; }
+
     footer {
-      text-align: center;
-      color: var(--muted);
-      margin-top: 8px;
-      font-size: 14px;
+      font-size: 16px;
+      color: #555;
+      padding: 18px 0 40px;
+    }
+
+    #startBtn, #nextBtn {
+      margin-top: 16px;
+      font-size: 20px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      background: #0066cc;
+      color: white;
+      border: none;
+    }
+
+    #nextBtn.disabled {
+      opacity: 0.5;
+      pointer-events: none;
     }
   </style>
 </head>
+
 <body>
-  <div class="wrap">
-    <div class="card center">
-      <h1>مسابقة الهمزة المتوسطة والمتطرفة</h1>
-      <div class="muted">إملاء للمرحلة الابتدائية — ٣ خيارات لكل سؤال</div>
+  <header>
+    <h1>مسابقة الهمزة المتوسطة والمتطرفة</h1>
+    <h2>إملاء للمرحلة الابتدائية — ٣ خيارات لكل سؤال</h2>
+
+    <div class="info-bar">
+      <div>النقاط: <span id="score">0</span></div>
+      <div>الوقت: <span id="timerLabel">90 ث</span></div>
     </div>
+  </header>
 
-    <div id="startView" class="card center">
-      <p class="muted" style="font-size:clamp(16px,2.6vw,20px)">اضغط ابدأ لبدء جولة مدتها 45 ثانية. كل إجابة صحيحة = نقطة.</p>
-      <button id="startBtn" class="btn primary" style="width:100%; font-weight:700;">ابدأ الجولة</button>
-    </div>
-
-    <div id="quizView" class="card hidden">
-      <div class="row between" style="margin-bottom:12px">
-        <div class="chip"><span>⏱</span><span id="time">45 ث</span></div>
-        <div class="chip"><span>✅</span><span id="score">0</span></div>
-      </div>
-
-      <div id="prompt" class="prompt">—</div>
+  <main>
+    <div class="card">
+      <div id="prompt"></div>
       <div id="choices"></div>
-
-      <div id="feedback" class="card hidden" style="margin-top:12px"></div>
-
-      <div class="row" style="justify-content:center; gap:10px; margin-top:14px">
-        <button id="nextBtn" class="btn" disabled>التالي</button>
-      </div>
+      <div id="feedback" class="card hidden"></div>
+      <button id="nextBtn" class="btn disabled" disabled>التالي</button>
     </div>
 
-    <div id="doneView" class="card hidden center">
-      <div id="result" style="font-size:clamp(20px,3.2vw,26px); font-weight:700; margin-bottom:10px">—</div>
-      <div class="row" style="justify-content:center; gap:10px">
-        <button id="restartBtn" class="btn primary">إعادة الجولة</button>
-        <button id="homeBtn" class="btn">الشاشة الرئيسية</button>
-      </div>
+    <div style="margin-top:20px;">
+      <button id="startBtn" class="btn">ابدأ الجولة</button>
+      <button id="restartBtn" class="btn">إعادة</button>
+      <button id="homeBtn" class="btn">الرئيسية</button>
     </div>
+  </main>
 
-    <footer>إعداد وتطوير الأستاذ: يحيى بن محمد الدريبي</footer>
-  </div>
+  <footer>
+    إعداد وتطوير الأستاذ: يحيى بن محمد الدريبي
+  </footer>
 
+  <!-- روابط السكربتات -->
   <script src="bank-200.js?v=3"></script>
   <script src="app.js?v=4" defer></script>
-  </body>
-  </html>
+</body>
+</html>
