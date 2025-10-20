@@ -1,42 +1,170 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>مسابقة الهمزة المتوسّطة</title>
-  <link rel="stylesheet" href="style.css">
+  <title>مسابقة الهمزة المتوسطة والمتطرفة</title>
   <style>
-    /* لمسة خفيفة في حال ما رفعت style.css بعد */
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto; background:#f6f7fb; margin:0}
-    .container{max-width:820px;margin:40px auto;padding:16px}
-    .card{background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,.06);padding:18px}
-    h1{margin:0 0 6px}
-    .muted{color:#666}
-    .btn{background:#e8f0ff;border:1px solid #cdd9ff;border-radius:10px;padding:10px 14px;cursor:pointer}
-    .btn[disabled]{opacity:.5;cursor:not-allowed}
-    .choices{display:grid;gap:10px}
-    .choice{background:#eef1f7;border:1px solid #d8dde7;border-radius:12px;padding:10px 14px;cursor:pointer;text-align:right}
-    .row{display:flex;gap:10px;align-items:center;justify-content:space-between}
-    .feedback{margin-top:8px}
-    .ok{color:#0a8f3a}.bad{color:#b42318}
+    :root {
+      --bg1: #f7f8fb;
+      --bg2: #eef1f5;
+      --ink: #111;
+      --muted: #6b7280;
+      --accent: #2563eb;
+      --ok: #1b7f2a;
+      --bad: #b25400;
+      --card: #ffffff;
+      --border: rgba(0,0,0,.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "SF Pro", "Segoe UI", Roboto, "Noto Naskh Arabic", "Geeza Pro", "Almarai", Tahoma, Arial, sans-serif;
+      color: var(--ink);
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      min-height: 100vh;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+    }
+    .wrap {
+      width: min(980px, 100%);
+      padding: 24px 16px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 10px 24px rgba(0,0,0,.04);
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(24px, 4.8vw, 36px);
+      font-weight: 800;
+      text-align: center;
+    }
+    .muted { color: var(--muted); }
+    .row {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .between { justify-content: space-between; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 12px;
+      background: var(--bg2);
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-weight: 600;
+    }
+    .btn {
+      display: inline-block;
+      border: 1px solid var(--border);
+      background: #e8eefc;
+      color: #0f1f52;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: clamp(16px, 2.8vw, 20px);
+      cursor: pointer;
+      text-align: center;
+      user-select: none;
+    }
+    .btn.primary {
+      background: #dbe8ff;
+      border-color: #c7dcff;
+    }
+    .btn:disabled { opacity: .6; cursor: not-allowed; }
+    .center { text-align: center; }
+
+    /* السؤال (النص الأعلى) — أكبر من قبل */
+    .prompt {
+      font-size: clamp(34px, 6.2vw, 48px);
+      line-height: 1.35;
+      font-weight: 800;
+      text-align: center;
+      padding: 10px 8px;
+      margin: 6px 0 10px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+
+    /* الخيارات — أكبر من قبل */
+    .choice {
+      width: 100%;
+      text-align: start;
+      padding: 14px 16px;
+      margin: 8px 0;
+      font-size: clamp(22px, 2.8vw, 30px);
+      line-height: 1.35;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      cursor: pointer;
+    }
+    .choice:hover { filter: brightness(.98); }
+    .ok {
+      color: var(--ok);
+      background: rgba(27,127,42,.10);
+      border-color: rgba(27,127,42,.25);
+    }
+    .bad {
+      color: var(--bad);
+      background: rgba(178,84,0,.10);
+      border-color: rgba(178,84,0,.25);
+    }
+    .hidden { display: none; }
+    footer {
+      text-align: center;
+      color: var(--muted);
+      margin-top: 8px;
+      font-size: 14px;
+    }
   </style>
-  <!-- مهم: defer يضمن تنفيذ السكربت بعد بناء الـDOM -->
-  <script src="./app.js" defer></script>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>مسابقة الهمزة المتوسّطة</h1>
-      <div class="muted">سريعة وسهلة لطلاب الصف السادس</div>
-    </header>
+  <div class="wrap">
+    <div class="card center">
+      <h1>مسابقة الهمزة المتوسطة والمتطرفة</h1>
+      <div class="muted">إملاء للمرحلة الابتدائية — ٣ خيارات لكل سؤال</div>
+    </div>
 
-    <main id="screen" class="card" style="margin-top:14px">
-      <!-- تُملأ ديناميكيًا من app.js -->
-    </main>
+    <div id="startView" class="card center">
+      <p class="muted" style="font-size:clamp(16px,2.6vw,20px)">اضغط ابدأ لبدء جولة مدتها 45 ثانية. كل إجابة صحيحة = نقطة.</p>
+      <button id="startBtn" class="btn primary" style="width:100%; font-weight:700;">ابدأ الجولة</button>
+    </div>
 
-    <footer class="muted" style="text-align:center;margin-top:12px;">
-      إعداد وتطوير: يحيى بن محمد الدريبي
-    </footer>
+    <div id="quizView" class="card hidden">
+      <div class="row between" style="margin-bottom:12px">
+        <div class="chip"><span>⏱</span><span id="time">45 ث</span></div>
+        <div class="chip"><span>✅</span><span id="score">0</span></div>
+      </div>
+
+      <div id="prompt" class="prompt">—</div>
+      <div id="choices"></div>
+
+      <div id="feedback" class="card hidden" style="margin-top:12px"></div>
+
+      <div class="row" style="justify-content:center; gap:10px; margin-top:14px">
+        <button id="nextBtn" class="btn" disabled>التالي</button>
+      </div>
+    </div>
+
+    <div id="doneView" class="card hidden center">
+      <div id="result" style="font-size:clamp(20px,3.2vw,26px); font-weight:700; margin-bottom:10px">—</div>
+      <div class="row" style="justify-content:center; gap:10px">
+        <button id="restartBtn" class="btn primary">إعادة الجولة</button>
+        <button id="homeBtn" class="btn">الشاشة الرئيسية</button>
+      </div>
+    </div>
+
+    <footer>إعداد وتطوير الأستاذ: يحيى بن محمد الدريبي</footer>
   </div>
+
+  <script src="bank-200.js"></script>
+  <script src="app.js" defer></script>
 </body>
 </html>

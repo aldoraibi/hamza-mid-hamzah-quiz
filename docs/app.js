@@ -1,102 +1,159 @@
-/* bank-200.js
-   يولّد 200 عنصراً (100 همزة متوسّطة + 100 همزة متطرّفة)
-   مهيّأة للاستخدام مع app.js (ثلاثة خيارات/سؤال وموضع صحيح عشوائي داخل app.js)
-*/
+// Hamza Quiz — 3 choices, random correct position, 45s round
+// Requires global BANK (array of {prompt, correct})
+(function(){
+  const $ = s => document.querySelector(s);
+  const startBtn   = $("#startBtn");
+  const restartBtn = $("#restartBtn");
+  const homeBtn    = $("#homeBtn");
+  const timeEl     = $("#time");
+  const scoreEl    = $("#score");
+  const promptEl   = $("#prompt");
+  const choicesEl  = $("#choices");
+  const feedbackEl = $("#feedback");
+  const nextBtn    = $("#nextBtn");
+  const startView  = $("#startView");
+  const quizView   = $("#quizView");
+  const doneView   = $("#doneView");
 
-// ————————————————————————————————
-// ١) بذور مختارة للهمزة المتوسّطة (أمثلة شائعة وصحيحة)
-const BASE_MID = [
-  "يَأْكُل","سَأَل","رَأْس","مَسْأَلة","يَسْأَل","فَأْر","مَأْكَل","مَأْمَن","مَأْخَذ","يَأْس",
-  "مُؤْمِن","مُؤْتَمَر","يُؤْمِن","يُؤْثِر","مُؤَجَّل","مُؤْذٍ","مَسْؤُول","سُؤَال","تَفاؤُل","مُؤْنِس",
-  "سَئِم","مِئْذَنة","فِئَة","بَائِس","سَائِل","سَائِح","مَرْئِيّ","تَنْشِئَة","بِيئَة","قِرَاءَة",
-  "يَتَفَأَّل","مَأْسَاة","مُؤْتَمَن","مُؤْلِم","مُؤْذِي","مُؤَسَّسَة","مُؤَكَّد","مُؤَيَّد","مُؤَاخَذَة","مُؤَازَرَة",
-  "رَئِيس","كَفَاءَة","مُلَاءَمَة","مَبَادِئ","قَرَائِن","مَلَائِكَة","سَيِّئَة","هَنِيئًا","مَرِيئًا","بَرِيء",
-  "قَارِئ","مُنْشِئ","مُنْشَأ","تَأْثِير","تَأْمِين","تَأْسِيس","تَأْلِيف","تَأْهِيل","تَأْكِيد","مَأْهُول",
-  "مَأْمُون","مَأْوًى","مُؤَخَّر","مُؤَقَّت","مُؤَثِّر","مُؤَيِّد","مُؤْسِف","مُؤْتَمِن","مُؤْتَلِف","مُؤْتَنِف",
-  "قُرِئَ","قَرِئَ","قَارِئات","تَسْوِئَة","تَنْبِئَة","تَوْقِئَة","نَشْأَة","سَأَم","مَلَائِم","سَائِل",
-  "مَسَائِل","مَبَائِث","نَبَائِغ","قَرَائِيّ","ضَوْء","إضَاءَة","مُؤْتِي","مُؤْتًى","مُؤْتُون","مُؤْهِل"
-];
+  const STATE = {
+    started:false, time:45, score:0, order:[], idx:0, current:null, timer:null
+  };
 
-// ٢) بذور مختارة للهمزة المتطرّفة
-const BASE_END = [
-  "بَدَأ","نَشَأ","قَرَأ","مَلْجَأ","مَبْدَأ","شَيْء","جُزْء","سَمَاء","مَاء","مَسَاء",
-  "دُعَاء","بِنَاء","رِدَاء","عِبْء","دِفْء","بُطْء","مِلْء","بَرِيء","هَنِيئًا","مَرِيئًا",
-  "قَارِئ","بَادِئ","بَارِئ","مَبْدَأُه","مَلْجَؤُه","يَقْرَأُ","تَقْرَأُ","نَقْرَأُ","يَبْدَأُ","تَبْدَأُ",
-  "يَجْرُؤُ","تَجْرُؤُ","جُرْؤٌ","جُرْؤًا","سُوء","سُوءًا","مُرُوءَة","بُرْء","نَشْء","دَرْء",
-  "سَمَاءٌ","سَمَاءً","صَحْرَاء","بَيْدَاء","بَيْضَاء","سَمْرَاء","خَضْرَاء","ابْتِدَاء","انْتِهَاء","ابْتِدَاءً",
-  "مَلْءٌ","مِلْئًا","مِلْءَهُ","شَيْئًا","جُزْءًا","عِبْئًا","دِفْئًا","بُطْئًا","مَلْءَ","شَيْءَ",
-  "جُزءَ","قَرءَ","مَرءَ","دِفءَ","بُطءَ","مَلءَ","قَارِئٌ","قَارِئًا","قَارِئٍ","بَرِيئٌ",
-  "بَرِيئًا","بَرِيئٍ","بَادِئٌ","بَادِئًا","بَادِئٍ","مَلْجَأً","مَبْدَأً","مَنْشَأ","مَنْشَأً","مَأْوَى"
-];
-
-// ————————————————————————————————
-// توسيع تلقائي بسيط لإنتاج 100 + 100
-function uniq(arr) {
-  const out = [];
-  const seen = new Set();
-  for (const w of arr) {
-    if (!seen.has(w)) { out.push(w); seen.add(w); }
-  }
-  return out;
-}
-
-function expandMid(seed) {
-  // أشكال خفيفة تُحافظ على الهمزة المتوسّطة وتضيف تنوين/تصاريف
-  const forms = [seed];
-  // تنوين إن أمكن (نضيف اختياريًا شكلًا بالحركات)
-  if (!/[ًٌٍ]$/.test(seed)) {
-    forms.push(seed + "ً"); // تنوين فتح (للعرض فقط)
-  }
-  // إضافة ضمير/لاحقة بسيطة إن كانت الكلمة اسمًا
-  if (!seed.includes("ُ ") && !seed.endsWith("ٌ")) {
-    forms.push(seed.replace(/\s+$/,"") + "هِ"); // مثال: قِرَاءَةِهِ (مجرد تنويع)
-  }
-  return uniq(forms);
-}
-
-function expandEnd(seed) {
-  // المحافظة على الهمزة المتطرّفة وإضافة تنوين/ضمائر طبيعية
-  const forms = [seed];
-  // أشكال بالتنوين (إن لم تكن موجودة)
-  if (!/[ًٌٍ]$/.test(seed) && !seed.endsWith("ٌ")) {
-    forms.push(seed.replace(/\s*$/, "ً")); // تنوين فتح
-  }
-  // إضافة أل التعريف أو ضمير ملكي
-  if (!/^ال/.test(seed)) {
-    forms.push("ال" + seed);
-  }
-  if (!seed.endsWith("ه")) {
-    forms.push(seed + "ه"); // ملجأه / مبدأه ...
-  }
-  return uniq(forms);
-}
-
-// ابنِ قوائم نهائية 100/100
-function buildList(base, expander, targetCount) {
-  const out = [];
-  let i = 0;
-  while (out.length < targetCount) {
-    const seed = base[i % base.length];
-    const ex = expander(seed);
-    for (const w of ex) {
-      if (out.length < targetCount) out.push(w);
-      else break;
+  function shuffle(a){
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]]=[a[j],a[i]];
     }
-    i++;
-    if (i > 2000) break; // حارس أمان
+    return a;
   }
-  return uniq(out).slice(0, targetCount);
-}
 
-const MID_LIST = buildList(BASE_MID, expandMid, 100);   // 100 متوسّطة
-const END_LIST = buildList(BASE_END, expandEnd, 100);   // 100 متطرّفة
+  function uniq(arr){
+    const out=[]; const seen=new Set();
+    for(const x of arr){ if(!seen.has(x)){ out.push(x); seen.add(x);} }
+    return out;
+  }
 
-// ————————————————————————————————
-// تحويل إلى BANK (صيغة مفهومة لـ app.js)
-const BANK = [
-  ...MID_LIST.map(w => ({ prompt: w, correct: w })),
-  ...END_LIST.map(w => ({ prompt: w, correct: w })),
-];
+  function makeDistractors(correct){
+    // توليد بدائل مبسّطة اعتمادًا على موضع الهمزة
+    const pool = new Set();
+    const base = correct;
+    const repls = [
+      [/[أإآ]/g, "ئ"],
+      [/[أإآ]/g, "ؤ"],
+      [/ؤ/g, "ئ"],
+      [/ئ/g, "ؤ"],
+      [/ء/g, "أ"],
+      /[َُِّْ]/g // remove tashkeel
+    ];
+    for(const r of repls){
+      const v = typeof r === "object" && r.global!==undefined
+        ? base.replace(r, (m)=> (r===/[َُِّْ]/g ? "" : "أ"))
+        : base.replace(r, "");
+    }
+    // توليدات أدقّ حسب النوع
+    pool.add(base.replace(/[أإآ]/g,"أ"));
+    pool.add(base.replace(/[أإآ]/g,"ئ"));
+    pool.add(base.replace(/[أإآ]/g,"ؤ"));
+    pool.add(base.replace(/ؤ/g,"ئ"));
+    pool.add(base.replace(/ئ/g,"ؤ"));
+    pool.add(base.replace(/ء/g,"أ"));
+    pool.add(base.replace(/[َُِّْ]/g,""));
+    // نظّف
+    const outs = uniq(Array.from(pool)).filter(x=>x!==base);
+    shuffle(outs);
+    // ضمن 2 مُلهيين
+    while(outs.length<2){ outs.push(base + " "); }
+    return outs.slice(0,2);
+  }
 
-// للتأكيد في الـ Console
-console.log(`bank-200.js: built BANK with ${BANK.length} items (mid: ${MID_LIST.length}, end: ${END_LIST.length})`);
+  function buildQuestion(item){
+    const wrongs = makeDistractors(item.correct);
+    const choices = [item.correct, ...wrongs];
+    shuffle(choices);
+    const correctIndex = choices.indexOf(item.correct);
+    return { prompt:item.prompt, choices, correctIndex };
+  }
+
+  function renderHUD(){
+    timeEl.textContent = STATE.time + " ث";
+    scoreEl.textContent = STATE.score;
+  }
+
+  function show(v){
+    startView.classList.add("hidden");
+    quizView.classList.add("hidden");
+    doneView.classList.add("hidden");
+    v.classList.remove("hidden");
+  }
+
+  function startGame(){
+    STATE.started = true;
+    STATE.time = 45;
+    STATE.score = 0;
+    STATE.order = shuffle([...Array(BANK.length).keys()]);
+    STATE.idx = 0;
+    nextQuestion(true);
+    renderHUD();
+    show(quizView);
+
+    clearInterval(STATE.timer);
+    STATE.timer = setInterval(()=>{
+      if(!STATE.started) return;
+      STATE.time--;
+      renderHUD();
+      if(STATE.time<=0){ finishGame(); }
+    },1000);
+  }
+
+  function finishGame(){
+    STATE.started=false;
+    clearInterval(STATE.timer);
+    document.getElementById("result").textContent = "نتيجتك: " + STATE.score + " نقطة";
+    show(doneView);
+  }
+
+  function nextQuestion(first=false){
+    if(!first){ STATE.idx = (STATE.idx+1) % STATE.order.length; }
+    const item = BANK[STATE.order[STATE.idx]];
+    STATE.current = buildQuestion(item);
+    renderQuestion();
+  }
+
+  function renderQuestion(){
+    const q = STATE.current;
+    promptEl.textContent = q.prompt;
+    choicesEl.innerHTML = "";
+    q.choices.forEach((txt,i)=>{
+      const b = document.createElement("button");
+      b.className = "choice";
+      b.textContent = txt;
+      b.onclick = ()=>onChoice(i);
+      choicesEl.appendChild(b);
+    });
+    feedbackEl.className = "card hidden";
+    feedbackEl.textContent = "";
+    nextBtn.disabled = true;
+  }
+
+  function onChoice(i){
+    const ok = (i === STATE.current.correctIndex);
+    if(ok){
+      STATE.score += 1;
+      feedbackEl.className = "card ok";
+      feedbackEl.textContent = "أحسنت! ✅";
+    }else{
+      const corr = STATE.current.choices[STATE.current.correctIndex];
+      feedbackEl.className = "card bad";
+      feedbackEl.textContent = "إجابة غير صحيحة ❌ — الصحيح: «" + corr + "»";
+    }
+    renderHUD();
+    nextBtn.disabled = false;
+  }
+
+  startBtn && (startBtn.onclick = startGame);
+  nextBtn && (nextBtn.onclick = ()=>nextQuestion(false));
+  restartBtn && (restartBtn.onclick = startGame);
+  homeBtn && (homeBtn.onclick = ()=>{ show(startView); });
+
+  console.log("Hamza Quiz web loaded — items:", (typeof BANK!=="undefined")?BANK.length:"NO BANK");
+})();
