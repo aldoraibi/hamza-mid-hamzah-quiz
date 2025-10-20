@@ -2,48 +2,41 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>مسابقة الهمزة المتوسّطة</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* لمسة خفيفة في حال ما رفعت style.css بعد */
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto; background:#f6f7fb; margin:0}
+    .container{max-width:820px;margin:40px auto;padding:16px}
+    .card{background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,.06);padding:18px}
+    h1{margin:0 0 6px}
+    .muted{color:#666}
+    .btn{background:#e8f0ff;border:1px solid #cdd9ff;border-radius:10px;padding:10px 14px;cursor:pointer}
+    .btn[disabled]{opacity:.5;cursor:not-allowed}
+    .choices{display:grid;gap:10px}
+    .choice{background:#eef1f7;border:1px solid #d8dde7;border-radius:12px;padding:10px 14px;cursor:pointer;text-align:right}
+    .row{display:flex;gap:10px;align-items:center;justify-content:space-between}
+    .feedback{margin-top:8px}
+    .ok{color:#0a8f3a}.bad{color:#b42318}
+  </style>
+  <!-- مهم: defer يضمن تنفيذ السكربت بعد بناء الـDOM -->
+  <script src="./app.js" defer></script>
 </head>
 <body>
-  <main class="container">
-    <header class="header">
+  <div class="container">
+    <header>
       <h1>مسابقة الهمزة المتوسّطة</h1>
-      <p class="subtitle">سريعة وسهلة لطلاب الصف السادس</p>
+      <div class="muted">سريعة وسهلة لطلاب الصف السادس</div>
     </header>
-    <section id="startView" class="card">
-      <p>اضغط ابدأ لبدء جولة مدتها 45 ثانية. الإجابة الصحيحة تُكسبك نقطة.</p>
-      <button id="startBtn" class="btn accent">ابدأ الجولة</button>
-    </section>
-    <section id="quizView" class="card hidden">
-      <div class="topbar">
-        <div class="chip">⏱ <span id="time">45</span> ث</div>
-        <div class="chip">✅ النقاط: <span id="score">0</span></div>
-      </div>
-      <div class="prompt">
-        <div class="hint">اختر الإملاء الصحيح:</div>
-        <div id="questionText" class="qtext">—</div>
-      </div>
-      <div id="choices" class="choices"></div>
-      <div id="feedback" class="feedback hidden">
-        <div id="feedbackLine" class="fb-line"></div>
-        <div id="note" class="note"></div>
-      </div>
-      <div class="footer">
-        <button id="nextBtn" class="btn" disabled>التالي</button>
-      </div>
-    </section>
-    <section id="resultView" class="card hidden">
-      <h2>انتهت الجولة!</h2>
-      <p class="score-line">نتيجتك: <span id="finalScore">0</span> نقطة</p>
-      <div class="actions">
-        <button id="replayBtn" class="btn accent">إعادة الجولة</button>
-        <button id="homeBtn" class="btn">الرجوع للشاشة الرئيسية</button>
-      </div>
-    </section>
-    <footer class="footer-note">إعداد وتطوير: يحيى بن محمد الدريبي</footer>
-  </main>
-  <script src="app.js"></script>
+
+    <main id="screen" class="card" style="margin-top:14px">
+      <!-- تُملأ ديناميكيًا من app.js -->
+    </main>
+
+    <footer class="muted" style="text-align:center;margin-top:12px;">
+      إعداد وتطوير: يحيى بن محمد الدريبي
+    </footer>
+  </div>
 </body>
 </html>
