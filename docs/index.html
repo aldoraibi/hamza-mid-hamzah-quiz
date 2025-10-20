@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>مسابقة الهمزة المتوسّطة</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <h1>مسابقة الهمزة المتوسّطة</h1>
+      <p class="subtitle">سريعة وسهلة لطلاب الصف السادس</p>
+    </header>
+
+    <section id="startView" class="card">
+      <p>اضغط ابدأ لبدء جولة مدتها 45 ثانية. الإجابة الصحيحة تُكسبك نقطة.</p>
+      <button id="startBtn" class="btn accent">ابدأ الجولة</button>
+    </section>
+
+    <section id="quizView" class="card hidden">
+      <div class="topbar">
+        <div class="chip">⏱ <span id="time">45</span> ث</div>
+        <div class="chip">✅ النقاط: <span id="score">0</span></div>
+      </div>
+
+      <div class="prompt">
+        <div class="hint">اختر الإملاء الصحيح:</div>
+        <div id="questionText" class="qtext">—</div>
+      </div>
+
+      <div id="choices" class="choices"></div>
+
+      <div id="feedback" class="feedback hidden">
+        <div id="feedbackLine" class="fb-line"></div>
+        <div id="note" class="note"></div>
+      </div>
+
+      <div class="footer">
+        <button id="nextBtn" class="btn" disabled>التالي</button>
+      </div>
+    </section>
+
+    <section id="resultView" class="card hidden">
+      <h2>انتهت الجولة!</h2>
+      <p class="score-line">نتيجتك: <span id="finalScore">0</span> نقطة</p>
+      <div class="actions">
+        <button id="replayBtn" class="btn accent">إعادة الجولة</button>
+        <button id="homeBtn" class="btn">الرجوع للشاشة الرئيسية</button>
+      </div>
+    </section>
+
+    <footer class="footer-note">
+      إعداد وتطوير: يحيى بن محمد الدريبي
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
